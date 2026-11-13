@@ -41,6 +41,7 @@ async function chooseRadio(value, icon) {
 
 async function bindFrame(index, path) {
   const slot = ".ingredient-bar-container > .frame-trigger:" + (index ? "last-child" : "first-child");
+  const bound = slot + " .chip-container[aria-busy=false] img.chip-image";
   await click(slot + " .empty-chip", index ? "Open end frame picker" : "Open start frame picker");
   const filename = path.split("/").at(-1);
   const upload = "button.sidebar-upload-btn";
@@ -51,10 +52,15 @@ async function bindFrame(index, path) {
   ]);
   const receipt = await chooser.setFiles(path);
   if (receipt.dialog) throw new Error("Flow opened a dialog during frame upload");
-  await page.waitForFunction(name => [...document.querySelectorAll("button.asset-item")]
-    .some(el => el.querySelector(".asset-title")?.textContent.trim() === name &&
-      el.querySelector("img")?.naturalWidth > 0),
-  filename, { timeout: 60000 });
+  // Flow can bind a newly uploaded file directly and close the picker.
+  await page.waitForFunction(({ bound, filename }) => Boolean(document.querySelector(bound)) ||
+    [...document.querySelectorAll("button.asset-item")].some(el =>
+      el.querySelector(".asset-title")?.textContent.trim() === filename &&
+      el.querySelector("img")?.naturalWidth > 0), { bound, filename }, { timeout: 60000 });
+  if (await page.evaluate(selector => Boolean(document.querySelector(selector)), bound)) {
+    console.error(index ? "End frame bound." : "Start frame bound.");
+    return;
+  }
   const assetIndex = await page.evaluate(name => {
     const items = [...document.querySelectorAll("button.asset-item")];
     const matches = items.filter(el => el.querySelector(".asset-title")?.textContent.trim() === name);
@@ -69,8 +75,7 @@ async function bindFrame(index, path) {
         el.querySelector("img")?.complete && el.querySelector("img")?.naturalWidth > 0),
   filename, { timeout: 60000 });
   await click("button.detail-add-to-prompt-btn", "Bind uploaded frame image");
-  await page.waitForSelector(slot + " .chip-container[aria-busy=false] img.chip-image",
-    { timeout: 15000 });
+  await page.waitForSelector(bound, { timeout: 15000 });
   console.error(index ? "End frame bound." : "Start frame bound.");
 }
 
@@ -98,6 +103,10 @@ try {
     const title = "flow-editable-text input";
     await page.fill(title, request.title);
     await page.press(title, "Enter");
+  }
+  const agentMode = "button.agent-mode-chip[aria-pressed=true]";
+  if (await page.evaluate(selector => Boolean(document.querySelector(selector)), agentMode)) {
+    await click(agentMode, "Open the frame editor");
   }
   if (!(await page.evaluate(() => Boolean(document.querySelector("flow-prompt-box-settings"))))) {
     await click(settings, "Open Flow video settings");
