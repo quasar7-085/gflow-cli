@@ -192,10 +192,13 @@ try {
   }, grid);
   const findResult = ({ existing, prompt }) => {
     const thumbnails = [...document.querySelectorAll("flow-video-tile img.thumbnail")];
-    const hits = thumbnails.filter(image => image.getAttribute("src") &&
-      !existing.includes(image.getAttribute("src")) &&
-      !image.closest("flow-video-tile").querySelector("flow-pending-tile") &&
-      image.closest(".batch-container")?.textContent.replace(/\s+/g, " ").includes(prompt));
+    const hits = thumbnails.filter(image => {
+      const source = image.getAttribute("src");
+      const batch = image.closest(".batch-container");
+      return source && !existing.includes(source) &&
+        !image.closest("flow-video-tile").querySelector("flow-pending-tile") &&
+        (!batch || batch.textContent.replace(/\s+/g, " ").includes(prompt));
+    });
     return hits.length === 1 ? thumbnails.indexOf(hits[0]) + 1 : null;
   };
   const resultQuery = { existing, prompt: request.prompt.replace(/\s+/g, " ").trim() };
