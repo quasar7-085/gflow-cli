@@ -1,4 +1,4 @@
-const { readFile } = await import("node:fs/promises");
+const { readFile, writeFile } = await import("node:fs/promises");
 const request = JSON.parse(await readFile(inputPath, "utf8"));
 const task = await taskSpace(request.space);
 const page = task.page(request.page);
@@ -239,7 +239,7 @@ try {
       { label: "Download original Flow video" }),
   ]);
   await download.saveAs(request.output);
-  console.log(JSON.stringify({ project, media_id: id }));
+  await writeFile(request.result, JSON.stringify({ project, media_id: id }));
 } catch (error) {
   console.error((submitted ? "Check the submitted Flow job before retrying. " : "") + error.message);
   throw new Error("Ego Lite video run failed");

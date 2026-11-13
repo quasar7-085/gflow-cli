@@ -71,6 +71,7 @@ async def generate(
         if request.end_image:
             end = temporary / f"end-{temporary.name[-8:]}{request.end_image.suffix}"
             shutil.copyfile(request.end_image, end)
+        result_file = temporary / "result.json"
         payload: dict[str, Any] = {
             "space": int(space),
             "page": os.environ.get("GFLOW_EGO_PAGE", "p1"),
@@ -85,6 +86,7 @@ async def generate(
             "end": str(end) if end else None,
             "prompt": request.prompt,
             "output": str(temporary / "video.mp4"),
+            "result": str(result_file),
         }
         input_file = temporary / "request.json"
         input_file.write_text(json.dumps(payload), encoding="utf-8")
@@ -92,12 +94,12 @@ async def generate(
         script += _SCRIPT.read_text(encoding="utf-8")
         try:
             process = await asyncio.create_subprocess_exec(
-                "ego-browser", "nodejs", "-e", script, stdout=asyncio.subprocess.PIPE
+                "ego-browser", "nodejs", "-e", script
             )
         except FileNotFoundError as exc:
             raise ConfigurationError(detail="ego-browser must be available on PATH.") from exc
         try:
-            stdout, _ = await process.communicate()
+            await process.wait()
         except asyncio.CancelledError:
             if process.returncode is None:
                 process.terminate()
@@ -109,7 +111,7 @@ async def generate(
                 remediation_hint=_RETRY_HINT,
             )
         try:
-            result = json.loads(stdout.decode().strip().splitlines()[-1])
+            result = json.loads(result_file.read_text(encoding="utf-8"))
             media_id = validate_job_id(result["media_id"])
             project_id = validate_job_id(result["project"])
             video = temporary / "video.mp4"
