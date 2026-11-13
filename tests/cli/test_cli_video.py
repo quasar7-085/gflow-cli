@@ -34,6 +34,51 @@ def test_t2v_requires_prompt() -> None:
     assert result.exit_code != 0
 
 
+def test_i2v_ego_dispatch_preserves_cli_frames_and_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from gflow_cli import ego_i2v
+
+    start = tmp_path / "start.png"
+    end = tmp_path / "end.png"
+    output = tmp_path / "clip.mp4"
+    start.touch()
+    end.touch()
+    monkeypatch.setenv("GFLOW_EGO_SPACE", "23")
+    run = AsyncMock()
+    monkeypatch.setattr(ego_i2v, "run_cli", run)
+
+    result = CliRunner().invoke(
+        video,
+        [
+            "i2v",
+            "--initial-frame",
+            str(start),
+            "--end-frame",
+            str(end),
+            "Move forward.",
+            "--aspect",
+            "16:9",
+            "--duration",
+            "8",
+            "--output",
+            str(output),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    run.assert_awaited_once()
+    args = run.await_args.kwargs
+    assert (args["space"], args["start"], args["end"]) == ("23", str(start), str(end))
+    assert (args["aspect"], args["duration"], args["output"], args["as_json"]) == (
+        "16:9",
+        8,
+        output,
+        True,
+    )
+
+
 def test_t2v_invokes_transport_and_prints_path(tmp_path: Path) -> None:
     runner = CliRunner()
     expected_path = tmp_path / "test-uuid.mp4"

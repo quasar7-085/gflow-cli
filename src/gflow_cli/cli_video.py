@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import os
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -1460,6 +1461,34 @@ def i2v(  # NOSONAR
 
     start_path, start_ref_id = _classify_frame(resolved_image, "'IMAGE' / '--initial-frame'")
     end_path, end_ref_id = _classify_frame(end_frame, end_hint)
+
+    if (ego_space := os.environ.get("GFLOW_EGO_SPACE")) is not None:
+        from gflow_cli.ego_i2v import run_cli
+
+        run_with_handlers(
+            lambda: run_cli(
+                space=ego_space,
+                start=start_path,
+                end=end_path,
+                uses_media_id=bool(start_ref_id or end_ref_id),
+                prompt=resolved_prompt,
+                aspect=aspect,
+                model=VideoModel.from_cli(model) or I2V_DEFAULT_MODEL,
+                duration=int(duration) if duration is not None else None,
+                resolution=resolution,
+                count=count,
+                profile=profile,
+                tool_specs=tool_specs,
+                project=project_id or (get_settings().project if not project_name else None),
+                title=project_name or slugify_project_name(resolved_prompt, prefix="gflow-i2v"),
+                output=output_file,
+                out_dir=out_dir,
+                as_json=as_json,
+            ),
+            cli_command="video i2v",
+            as_json=as_json,
+        )
+        return
 
     profile_name = _resolve_profile(profile)
     project_id = default_project(project_id, project_name, profile_name)

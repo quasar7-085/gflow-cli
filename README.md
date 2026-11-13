@@ -31,6 +31,25 @@
 >
 > 🌐 **Headed browser today.** gflow drives Flow through a persistent Playwright Chromium profile, because Google's auth and reCAPTCHA gates require it. The [Architecture](#architecture--current-limitations) section shows where you can help.
 
+## Image-to-video in Ego Lite
+
+Set `GFLOW_EGO_SPACE` to the ID of an agent-controlled Ego Lite task space
+and `GFLOW_EGO_PAGE` to its signed-in Google Flow page label (defaults to
+`p1`). Keep that tab available and put the `ego-browser` CLI on PATH.
+
+```bash
+GFLOW_EGO_SPACE=42 GFLOW_EGO_PAGE=p1 gflow video i2v \
+  --initial-frame start.png --end-frame end.png "A smooth camera move" \
+  --model omni-1.2-flash --duration 8 --aspect 16:9 --resolution 720p \
+  --output clip.mp4
+```
+
+This path supports one clip from local image files on `flow.google.com`.
+Use `--project` to select an existing project with an empty composer.
+Omitting it creates a project. Ego Lite provides the account session.
+This path saves a local MP4 and supports `--json`. If the command stops
+after submission, inspect the Flow project before running it again.
+
 ## Why gflow-cli?
 
 You have a Google account with Flow access, you have Veo credits, and you run real batch work. gflow-cli gives you:
